@@ -1,13 +1,12 @@
 {
+  "id": "baznas",
   "name": "BAZNAS",
-  "type": "National Zakat Authority",
-  "goals": [
-    "Increase zakat collection",
-    "Reduce poverty",
-    "Support SDGs"
-  ],
-  "constraints": [
-    "Limited literacy",
-    "Regulatory restrictions"
+  "type": "regulator",
+  "objective": "Optimize national zakat collection and distribution",
+  "kpis": [
+    "collection_growth",
+    "poverty_reduction",
+    "mustahik_graduation",
+    "sdg_contribution"
   ]
 }

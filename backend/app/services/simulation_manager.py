@@ -13,6 +13,7 @@ from datetime import datetime
 from enum import Enum
 
 from ..config import Config
+from ..services.supabase_manager import SupabaseManager
 from ..utils.logger import get_logger
 from .zep_entity_reader import ZepEntityReader, FilteredEntities
 from .oasis_profile_generator import OasisProfileGenerator, OasisAgentProfile
@@ -163,7 +164,9 @@ class SimulationManager:
         state_file = os.path.join(sim_dir, "state.json")
         
         if not os.path.exists(state_file):
-            return None
+            # Try to download from Supabase
+            if not SupabaseManager.download_file(f'simulations/{simulation_id}/state.json', state_file):
+                return None
         
         with open(state_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -464,8 +467,18 @@ class SimulationManager:
         """列出所有模拟"""
         simulations = []
         
+        os.makedirs(self.SIMULATION_DATA_DIR, exist_ok=True)
+        local_sims = os.listdir(self.SIMULATION_DATA_DIR)
+        
+        # Sync from Supabase if local is empty
+        if len(local_sims) == 0:
+            remote_sims = SupabaseManager.list_directory('simulations')
+            for rs in remote_sims:
+                SupabaseManager.download_file(f'simulations/{rs}/state.json', os.path.join(self.SIMULATION_DATA_DIR, rs, 'state.json'))
+            local_sims = os.listdir(self.SIMULATION_DATA_DIR)
+            
         if os.path.exists(self.SIMULATION_DATA_DIR):
-            for sim_id in os.listdir(self.SIMULATION_DATA_DIR):
+            for sim_id in local_sims:
                 # 跳过隐藏文件（如 .DS_Store）和非目录文件
                 sim_path = os.path.join(self.SIMULATION_DATA_DIR, sim_id)
                 if sim_id.startswith('.') or not os.path.isdir(sim_path):

@@ -214,6 +214,9 @@ def generate_ontology():
         
         # 生成本体
         logger.info("调用 LLM 生成本体定义...")
+        from app.config import Config
+        logger.info(f"Using API KEY in generate_ontology: {Config.LLM_API_KEY}")
+        
         generator = OntologyGenerator()
         ontology = generator.generate(
             document_texts=document_texts,
@@ -248,6 +251,8 @@ def generate_ontology():
         })
         
     except Exception as e:
+        logger.error(f"Generate ontology error: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "success": False,
             "error": str(e),

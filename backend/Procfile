@@ -1,0 +1,2 @@
+web: gunicorn -b 0.0.0.0:$PORT run:app
+worker: python scripts/run_parallel_simulation.py --no-wait

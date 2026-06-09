@@ -24,6 +24,9 @@ class LLMClient:
         self.base_url = base_url or Config.LLM_BASE_URL
         self.model = model or Config.LLM_MODEL_NAME
         
+        if self.base_url and not self.base_url.startswith("http://") and not self.base_url.startswith("https://"):
+            self.base_url = "https://" + self.base_url
+        
         if not self.api_key:
             raise ValueError("LLM_API_KEY 未配置")
         
@@ -36,7 +39,7 @@ class LLMClient:
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: int = 4096,
+        max_tokens: int = 3000,
         response_format: Optional[Dict] = None
     ) -> str:
         """
@@ -71,7 +74,7 @@ class LLMClient:
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.3,
-        max_tokens: int = 4096
+        max_tokens: int = 3000
     ) -> Dict[str, Any]:
         """
         发送聊天请求并返回JSON
@@ -87,15 +90,15 @@ class LLMClient:
         response = self.chat(
             messages=messages,
             temperature=temperature,
-            max_tokens=max_tokens,
-            response_format={"type": "json_object"}
+            max_tokens=max_tokens
         )
-        # 清理markdown代码块标记
+        # 尝试提取JSON块 (处理LLM返回额外文本的情况)
         cleaned_response = response.strip()
-        cleaned_response = re.sub(r'^```(?:json)?\s*\n?', '', cleaned_response, flags=re.IGNORECASE)
-        cleaned_response = re.sub(r'\n?```\s*$', '', cleaned_response)
-        cleaned_response = cleaned_response.strip()
-
+        start_idx = cleaned_response.find('{')
+        end_idx = cleaned_response.rfind('}')
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            cleaned_response = cleaned_response[start_idx:end_idx+1]
+            
         try:
             return json.loads(cleaned_response)
         except json.JSONDecodeError:

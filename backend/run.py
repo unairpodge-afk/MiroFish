@@ -22,7 +22,19 @@ from app import create_app
 from app.config import Config
 
 
+
+# Validate config and create app globally for gunicorn
+errors = Config.validate()
+if errors:
+    print('Configuration Errors:')
+    for err in errors:
+        print(f'  - {err}')
+    # We do not exit here in case gunicorn is running it, but we log it.
+
+app = create_app()
+
 def main():
+
     """主函数"""
     # 验证配置
     errors = Config.validate()
@@ -34,7 +46,7 @@ def main():
         sys.exit(1)
     
     # 创建应用
-    app = create_app()
+    pass # app is now global
     
     # 获取运行配置
     host = os.environ.get('FLASK_HOST', '0.0.0.0')

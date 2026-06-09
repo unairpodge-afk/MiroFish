@@ -9,6 +9,7 @@ import warnings
 # 需要在所有其他导入之前设置
 warnings.filterwarnings("ignore", message=".*resource_tracker.*")
 
+import os
 from flask import Flask, request
 from flask_cors import CORS
 
@@ -39,8 +40,9 @@ def create_app(config_class=Config):
         logger.info("MiroFish Backend 启动中...")
         logger.info("=" * 50)
     
-    # 启用CORS
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # 配置CORS
+    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3002")
+    CORS(app, resources={r"/api/*": {"origins": [frontend_url, "http://localhost:3002", "http://localhost:5173"]}})
     
     # 注册模拟进程清理函数（确保服务器关闭时终止所有模拟进程）
     from .services.simulation_runner import SimulationRunner

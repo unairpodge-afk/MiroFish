@@ -12,6 +12,7 @@ from typing import Dict, Any, List, Optional
 from enum import Enum
 from dataclasses import dataclass, field, asdict
 from ..config import Config
+from ..services.supabase_manager import SupabaseManager
 
 
 class ProjectStatus(str, Enum):
@@ -172,6 +173,9 @@ class ProjectManager:
         
         with open(meta_path, 'w', encoding='utf-8') as f:
             json.dump(project.to_dict(), f, ensure_ascii=False, indent=2)
+        
+        # Supabase sync
+        SupabaseManager.upload_file(meta_path, f'projects/{project.project_id}/project.json')
     
     @classmethod
     def get_project(cls, project_id: str) -> Optional[Project]:
@@ -187,7 +191,9 @@ class ProjectManager:
         meta_path = cls._get_project_meta_path(project_id)
         
         if not os.path.exists(meta_path):
-            return None
+            # Try to download from Supabase
+            if not SupabaseManager.download_file(f'projects/{project_id}/project.json', meta_path):
+                return None
         
         with open(meta_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -207,8 +213,16 @@ class ProjectManager:
         """
         cls._ensure_projects_dir()
         
+        # Sync projects from Supabase if local is empty
+        local_projects = os.listdir(cls.PROJECTS_DIR)
+        if len(local_projects) == 0:
+            remote_projects = SupabaseManager.list_directory('projects')
+            for rp in remote_projects:
+                SupabaseManager.download_file(f'projects/{rp}/project.json', cls._get_project_meta_path(rp))
+            local_projects = os.listdir(cls.PROJECTS_DIR)
+            
         projects = []
-        for project_id in os.listdir(cls.PROJECTS_DIR):
+        for project_id in local_projects:
             project = cls.get_project(project_id)
             if project:
                 projects.append(project)
@@ -264,6 +278,9 @@ class ProjectManager:
         # 获取文件大小
         file_size = os.path.getsize(file_path)
         
+        # Supabase sync
+        SupabaseManager.upload_file(file_path, f'projects/{project_id}/files/{safe_filename}')
+        
         return {
             "original_filename": original_filename,
             "saved_filename": safe_filename,
@@ -277,6 +294,9 @@ class ProjectManager:
         text_path = cls._get_project_text_path(project_id)
         with open(text_path, 'w', encoding='utf-8') as f:
             f.write(text)
+        
+        # Supabase sync
+        SupabaseManager.upload_file(text_path, f'projects/{project_id}/extracted_text.txt')
     
     @classmethod
     def get_extracted_text(cls, project_id: str) -> Optional[str]:

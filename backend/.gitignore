@@ -1,0 +1,25 @@
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# App data
+uploads/
+logs/
+data/
+
+# OS files
+.DS_Store
+Thumbs.db

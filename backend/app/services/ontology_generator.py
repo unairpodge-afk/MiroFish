@@ -180,7 +180,11 @@ class OntologyGenerator:
     """
     
     def __init__(self, llm_client: Optional[LLMClient] = None):
-        self.llm_client = llm_client or LLMClient()
+        if llm_client:
+            self.llm_client = llm_client
+        else:
+            from ..config import Config
+            self.llm_client = LLMClient(model=Config.LLM_BOOST_MODEL_NAME)
     
     def generate(
         self,
@@ -217,7 +221,7 @@ class OntologyGenerator:
         result = self.llm_client.chat_json(
             messages=messages,
             temperature=0.3,
-            max_tokens=4096
+            max_tokens=3000
         )
         
         # 验证和后处理

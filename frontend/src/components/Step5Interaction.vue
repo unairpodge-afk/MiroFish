@@ -241,8 +241,21 @@
             </div>
           </div>
 
+          <!-- Chat Export Action -->
+          <div class="chat-export-bar" v-if="chatHistory.length > 0">
+            <button class="export-pdf-btn" @click="exportChatToPDF" :disabled="isExportingPdf">
+              <svg v-if="!isExportingPdf" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span v-if="isExportingPdf" class="loading-spinner-small"></span>
+              <span>{{ isExportingPdf ? 'Exporting...' : 'Export to PDF' }}</span>
+            </button>
+          </div>
+
           <!-- Chat Messages -->
-          <div class="chat-messages" ref="chatMessages">
+          <div class="chat-messages" ref="chatMessages" id="chat-export-area">
             <div v-if="chatHistory.length === 0" class="chat-empty">
               <div class="empty-icon">
                 <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -415,6 +428,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { chatWithReport, getReport, getAgentLog } from '../api/report'
 import { interviewAgents, getSimulationProfilesRealtime } from '../api/simulation'
+import html2pdf from 'html2pdf.js'
 
 const { t } = useI18n()
 
@@ -439,6 +453,7 @@ const chatInput = ref('')
 const chatHistory = ref([])
 const chatHistoryCache = ref({}) // 缓存所有对话记录: { 'report_agent': [], 'agent_0': [], 'agent_1': [], ... }
 const isSending = ref(false)
+const isExportingPdf = ref(false)
 const chatMessages = ref(null)
 const chatInputRef = ref(null)
 
@@ -779,6 +794,54 @@ const scrollToBottom = () => {
       chatMessages.value.scrollTop = chatMessages.value.scrollHeight
     }
   })
+}
+
+const exportChatToPDF = async () => {
+  if (chatHistory.value.length === 0) return
+  
+  isExportingPdf.value = true
+  try {
+    const element = document.getElementById('chat-export-area')
+    if (!element) return
+    
+    const clone = element.cloneNode(true)
+    clone.style.height = 'auto'
+    clone.style.maxHeight = 'none'
+    clone.style.overflow = 'visible'
+    clone.style.padding = '20px'
+    clone.style.backgroundColor = '#ffffff'
+    
+    const titleObj = document.createElement('h2')
+    titleObj.style.color = '#1f2937'
+    titleObj.style.marginBottom = '20px'
+    titleObj.style.borderBottom = '1px solid #e5e7eb'
+    titleObj.style.paddingBottom = '10px'
+    titleObj.style.fontFamily = 'sans-serif'
+    titleObj.innerText = `Chat Log - ${chatTarget.value === 'report_agent' ? 'Report Agent' : (selectedAgent.value?.username || 'Agent')}`
+    clone.insertBefore(titleObj, clone.firstChild)
+    
+    const wrapper = document.createElement('div')
+    wrapper.appendChild(clone)
+    wrapper.style.position = 'absolute'
+    wrapper.style.top = '-9999px'
+    wrapper.style.left = '-9999px'
+    document.body.appendChild(wrapper)
+    
+    const opt = {
+      margin:       10,
+      filename:     `MiroFish_Chat_${chatTarget.value}_${new Date().getTime()}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true, logging: false },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }
+    
+    await html2pdf().set(opt).from(clone).save()
+    document.body.removeChild(wrapper)
+  } catch (err) {
+    addLog(`Export PDF failed: ${err.message}`)
+  } finally {
+    isExportingPdf.value = false
+  }
 }
 
 // Survey Methods
@@ -2573,6 +2636,49 @@ watch(() => props.simulationId, (newId) => {
   border: none;
   border-top: 1px solid #E5E7EB;
   margin: 24px 0;
+}
+
+.chat-export-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 24px 0;
+  background-color: transparent;
+}
+
+.export-pdf-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.export-pdf-btn:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  color: #111827;
+  border-color: #d1d5db;
+}
+
+.export-pdf-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.loading-spinner-small {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 </style>
 
