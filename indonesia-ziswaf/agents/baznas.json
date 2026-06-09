@@ -1,0 +1,13 @@
+{
+  "name": "BAZNAS",
+  "type": "National Zakat Authority",
+  "goals": [
+    "Increase zakat collection",
+    "Reduce poverty",
+    "Support SDGs"
+  ],
+  "constraints": [
+    "Limited literacy",
+    "Regulatory restrictions"
+  ]
+}
