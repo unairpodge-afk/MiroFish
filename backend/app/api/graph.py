@@ -251,13 +251,11 @@ def generate_ontology():
         })
         
     except Exception as e:
-        logger.error(f"Generate ontology error: {str(e)}")
-        logger.error(traceback.format_exc())
+        logger.error(f"处理项目创建请求失败: {e}", exc_info=True)
         return jsonify({
             "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        }), 500
+            "error": f"Ontology Error: {str(e)}"
+        }), 200
 
 
 # ============== 接口2：构建图谱 ==============

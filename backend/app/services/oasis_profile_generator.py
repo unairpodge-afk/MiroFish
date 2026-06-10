@@ -570,10 +570,20 @@ class OasisProfileGenerator:
                     last_error = je
                     
             except Exception as e:
-                logger.warning(f"LLM调用失败 (attempt {attempt+1}): {str(e)[:80]}")
+                error_msg = str(e)
+                logger.warning(f"LLM调用失败 (attempt {attempt+1}): {error_msg[:100]}")
                 last_error = e
                 import time
-                time.sleep(1 * (attempt + 1))  # 指数退避
+                import re
+                
+                # Cek apakah ada informasi "retry in X.XXs" (Limit Gemini API)
+                retry_match = re.search(r'retry in (\d+\.?\d*)s', error_msg)
+                if retry_match:
+                    sleep_time = float(retry_match.group(1)) + 1.0
+                    logger.info(f"Rate limit API terdeteksi! Sistem otomatis jeda selama {sleep_time:.1f} detik...")
+                    time.sleep(sleep_time)
+                else:
+                    time.sleep(2 * (attempt + 1))  # 指数退避
         
         logger.warning(f"LLM生成人设失败（{max_attempts}次尝试）: {last_error}, 使用规则生成")
         return self._generate_profile_rule_based(

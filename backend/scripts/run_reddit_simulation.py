@@ -457,7 +457,9 @@ class RedditSimulationRunner:
             raise ValueError("缺少 API Key 配置，请在项目根目录 .env 文件中设置 LLM_API_KEY")
         
         if llm_base_url:
-            os.environ["OPENAI_API_BASE_URL"] = llm_base_url
+            if not llm_base_url.startswith(("http://", "https://")):
+            llm_base_url = f"https://{llm_base_url}"
+        os.environ["OPENAI_API_BASE_URL"] = llm_base_url
         
         print(f"LLM配置: model={llm_model}, base_url={llm_base_url[:40] if llm_base_url else '默认'}...")
         

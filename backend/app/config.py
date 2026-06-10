@@ -28,10 +28,19 @@ class Config:
     JSON_AS_ASCII = False
     
     # LLM配置（统一使用OpenAI格式）
-    LLM_API_KEY = os.environ.get('LLM_API_KEY')
-    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
-    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
-    LLM_BOOST_MODEL_NAME = os.environ.get('LLM_BOOST_MODEL_NAME', 'gpt-4o-mini')
+    LLM_API_KEY = os.environ.get('LLM_API_KEY', '').strip() or None
+    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai/').strip()
+    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gemini-2.5-flash').strip()
+    LLM_BOOST_API_KEY = os.environ.get('LLM_BOOST_API_KEY', '').strip() or None
+    LLM_BOOST_BASE_URL = os.environ.get('LLM_BOOST_BASE_URL', 'https://api.openai.com/v1').strip()
+    LLM_BOOST_MODEL_NAME = os.environ.get('LLM_BOOST_MODEL_NAME', 'gpt-4o-mini').strip()
+
+    # Pastikan URL memiliki protokol http:// atau https://
+    if LLM_BASE_URL and not LLM_BASE_URL.startswith(('http://', 'https://')):
+        LLM_BASE_URL = f"https://{LLM_BASE_URL}"
+    if LLM_BOOST_BASE_URL and not LLM_BOOST_BASE_URL.startswith(('http://', 'https://')):
+        LLM_BOOST_BASE_URL = f"https://{LLM_BOOST_BASE_URL}"
+
     
     # Supabase config
     SUPABASE_URL = os.environ.get('SUPABASE_URL')

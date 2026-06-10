@@ -202,8 +202,9 @@ const handleNewProject = async () => {
   try {
     loading.value = true
     currentPhase.value = 0
-    ontologyProgress.value = { message: 'Uploading and analyzing docs...' }
+    ontologyProgress.value = { message: 'Uploading and analyzing docs... (Mohon tunggu sebentar, maksimal 1 menit)' }
     addLog('Starting ontology generation: Uploading files...')
+    addLog('Please wait. System will auto-sleep if Google API rate limit is reached...')
     
     const formData = new FormData()
     pending.files.forEach(f => formData.append('files', f))

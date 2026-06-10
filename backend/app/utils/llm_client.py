@@ -64,11 +64,38 @@ class LLMClient:
         if response_format:
             kwargs["response_format"] = response_format
         
-        response = self.client.chat.completions.create(**kwargs)
-        content = response.choices[0].message.content
-        # 部分模型（如MiniMax M2.5）会在content中包含<think>思考内容，需要移除
-        content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
-        return content
+        import time
+        import re
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Tingkatkan retry ke 6 untuk menahan gempuran antrean Google
+        max_attempts = 6
+        last_error = None
+        
+        for attempt in range(max_attempts):
+            try:
+                response = self.client.chat.completions.create(**kwargs)
+                content = response.choices[0].message.content
+                if content:
+                    content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
+                return content or ""
+            except Exception as e:
+                error_msg = str(e)
+                logger.warning(f"LLM调用失败 (attempt {attempt+1}/{max_attempts}): {error_msg[:100]}")
+                last_error = e
+                
+                if attempt < max_attempts - 1:
+                    # Cek apakah ada informasi "retry in X.XXs"
+                    retry_match = re.search(r'retry in (\d+\.?\d*)s', error_msg)
+                    if retry_match:
+                        sleep_time = float(retry_match.group(1)) + 1.0
+                        logger.info(f"Rate limit API terdeteksi di LLMClient! Sistem jeda selama {sleep_time:.1f} detik...")
+                        time.sleep(sleep_time)
+                    else:
+                        time.sleep(2 * (attempt + 1))
+        
+        raise last_error or Exception("LLM调用失败")
     
     def chat_json(
         self,
@@ -90,7 +117,8 @@ class LLMClient:
         response = self.chat(
             messages=messages,
             temperature=temperature,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
+            response_format={"type": "json_object"}
         )
         # 尝试提取JSON块 (处理LLM返回额外文本的情况)
         cleaned_response = response.strip()

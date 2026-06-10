@@ -1027,6 +1027,9 @@ def create_model(config: Dict[str, Any], use_boost: bool = False):
         raise ValueError("缺少 API Key 配置，请在项目根目录 .env 文件中设置 LLM_API_KEY")
     
     if llm_base_url:
+        # Auto-append https:// if missing
+        if not llm_base_url.startswith(('http://', 'https://')):
+            llm_base_url = f"https://{llm_base_url}"
         os.environ["OPENAI_API_BASE_URL"] = llm_base_url
     
     print(f"{config_label} model={llm_model}, base_url={llm_base_url[:40] if llm_base_url else '默认'}...")
@@ -1243,6 +1246,20 @@ async def run_twitter_simulation(
         # 无论是否有活跃agent，都记录round开始
         if action_logger:
             action_logger.log_round_start(round_num + 1, simulated_hour)
+            
+        # === STRATEGI AL-FATIH: GANTI MODEL KE BOOST (BERBAYAR) DI RONDE 21 ===
+        if round_num == 20:
+            log_info("=== MEMASUKI RONDE 21: MENGGANTI OTAK AGEN KE MODEL BERBAYAR (BOOST) ===")
+            boost_model = create_model(config, use_boost=True)
+            if boost_model:
+                try:
+                    for _agent_id, _agent in result.agent_graph.get_agents():
+                        if hasattr(_agent, 'agent') and hasattr(_agent.agent, 'model_backend'):
+                            _agent.agent.model_backend = getattr(boost_model, 'backend', boost_model)
+                        elif hasattr(_agent, 'model_backend'):
+                            _agent.model_backend = getattr(boost_model, 'backend', boost_model)
+                except Exception as e:
+                    log_info(f"Gagal mengganti model: {e}")
         
         if not active_agents:
             # 没有活跃agent时也记录round结束（actions_count=0）
@@ -1250,9 +1267,10 @@ async def run_twitter_simulation(
                 action_logger.log_round_end(round_num + 1, 0)
             continue
         
-        actions = {agent: LLMAction() for _, agent in active_agents}
-        await result.env.step(actions)
-        
+        # Anti Rate-Limit: Jalankan agen secara bergantian dengan jeda napas 3 detik
+        for agent_id, agent in active_agents:
+            await result.env.step({agent: LLMAction()})
+            await asyncio.sleep(3)
         # 从数据库获取实际执行的动作并记录
         actual_actions, last_rowid = fetch_new_actions_from_db(
             db_path, last_rowid, agent_names
@@ -1442,16 +1460,30 @@ async def run_reddit_simulation(
         # 无论是否有活跃agent，都记录round开始
         if action_logger:
             action_logger.log_round_start(round_num + 1, simulated_hour)
-        
+
+        # === STRATEGI AL-FATIH: GANTI MODEL KE BOOST (BERBAYAR) DI RONDE 21 ===
+        if round_num == 20:
+            log_info("=== MEMASUKI RONDE 21: MENGGANTI OTAK AGEN KE MODEL BERBAYAR (BOOST) ===")
+            boost_model = create_model(config, use_boost=True)
+            if boost_model:
+                try:
+                    for _agent_id, _agent in result.agent_graph.get_agents():
+                        if hasattr(_agent, 'agent') and hasattr(_agent.agent, 'model_backend'):
+                            _agent.agent.model_backend = getattr(boost_model, 'backend', boost_model)
+                        elif hasattr(_agent, 'model_backend'):
+                            _agent.model_backend = getattr(boost_model, 'backend', boost_model)
+                except Exception as e:
+                    log_info(f"Gagal mengganti model: {e}")
         if not active_agents:
             # 没有活跃agent时也记录round结束（actions_count=0）
             if action_logger:
                 action_logger.log_round_end(round_num + 1, 0)
             continue
         
-        actions = {agent: LLMAction() for _, agent in active_agents}
-        await result.env.step(actions)
-        
+        # Anti Rate-Limit: Jalankan agen secara bergantian dengan jeda napas 3 detik
+        for agent_id, agent in active_agents:
+            await result.env.step({agent: LLMAction()})
+            await asyncio.sleep(3)
         # 从数据库获取实际执行的动作并记录
         actual_actions, last_rowid = fetch_new_actions_from_db(
             db_path, last_rowid, agent_names

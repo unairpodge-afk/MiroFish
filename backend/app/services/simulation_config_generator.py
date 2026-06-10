@@ -473,10 +473,20 @@ class SimulationConfigGenerator:
                     last_error = e
                     
             except Exception as e:
-                logger.warning(f"LLM调用失败 (attempt {attempt+1}): {str(e)[:80]}")
+                error_msg = str(e)
+                logger.warning(f"LLM调用失败 (attempt {attempt+1}): {error_msg[:100]}")
                 last_error = e
                 import time
-                time.sleep(2 * (attempt + 1))
+                import re
+                
+                # Cek apakah ada informasi "retry in X.XXs"
+                retry_match = re.search(r'retry in (\d+\.?\d*)s', error_msg)
+                if retry_match:
+                    sleep_time = float(retry_match.group(1)) + 1.0
+                    logger.info(f"Rate limit API terdeteksi! Sistem otomatis jeda selama {sleep_time:.1f} detik...")
+                    time.sleep(sleep_time)
+                else:
+                    time.sleep(2 * (attempt + 1))
         
         raise last_error or Exception("LLM调用失败")
     
